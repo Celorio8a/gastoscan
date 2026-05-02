@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="theme-color" content="#080e1a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="GastoScan">
+<title>GastoScan</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!-- PWA manifest inline -->
+<link rel="manifest" href="data:application/json,{%22name%22:%22GastoScan%22,%22short_name%22:%22GastoScan%22,%22start_url%22:%22.%22,%22display%22:%22standalone%22,%22background_color%22:%22%23080e1a%22,%22theme_color%22:%22%23080e1a%22}">
+
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #080e1a;
+    --surface: #0b1221;
+    --surface2: #0f172a;
+    --border: #1e293b;
+    --border2: #334155;
+    --text: #f1f5f9;
+    --text2: #94a3b8;
+    --text3: #64748b;
+    --text4: #475569;
+    --accent: #6366f1;
+    --accent2: #a78bfa;
+    --green: #10b981;
+    --red: #ef4444;
+  }
+
+  html, body {
+    min-height: 100vh;
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
+
+  .app { max-width: 860px; margin: 0 auto; padding: 24px 16px 80px; }
+
+  /* Header */
+  .header { margin-bottom: 28px; }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: clamp(30px, 7vw, 44px);
+    background: linear-gradient(135deg, #6366f1, #a78bfa, #f472b6);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    line-height: 1.1;
+  }
+  .header p { color: var(--text3); font-size: 14px; margin-top: 6px; }
+
+  /* Stats */
+  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 20px; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; padding: 16px;
+  }
+  .stat.main { background: linear-gradient(135deg, #1e1b4b, #2e1065); border-color: #4338ca44; }
+  .stat-label { color: var(--text3); font-size: 10px; font-family: 'DM Mono', monospace; letter-spacing: 0.08em; }
+  .stat-value { font-size: clamp(16px, 4vw, 26px); font-weight: 600; margin-top: 4px; }
+  .stat.main .stat-value { color: #c7d2fe; }
+
+  /* Category pills */
+  .cat-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; }
+  .cat-pill {
+    border-radius: 999px; padding: 5px 12px;
+    display: flex; align-items: center; gap: 5px; font-size: 12px;
+    font-weight: 500;
+  }
+
+  /* Scan zone */
+  .scan-zone {
+    border: 2px dashed var(--border);
+    border-radius: 20px; padding: 36px 20px;
+    text-align: center; cursor: pointer;
+    background: var(--surface);
+    transition: border-color 0.2s, background 0.2s;
+    margin-bottom: 14px; position: relative;
+  }
+  .scan-zone:hover, .scan-zone.drag { border-color: var(--accent); background: rgba(99,102,241,0.06); }
+  .scan-zone .icon { font-size: 42px; display: block; }
+  .scan-zone h2 { font-size: 16px; font-weight: 500; margin-top: 12px; }
+  .scan-zone p { color: var(--text4); font-size: 13px; margin-top: 5px; }
+
+  /* Camera buttons */
+  .camera-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+  .cam-btn {
+    padding: 14px; border-radius: 14px; border: 1px solid var(--border2);
+    background: var(--surface2); color: var(--text); cursor: pointer;
+    font-size: 14px; font-weight: 500; font-family: inherit;
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .cam-btn:hover { background: #1e293b; border-color: var(--accent); }
+  .cam-btn.primary {
+    background: linear-gradient(135deg, var(--accent), #8b5cf6);
+    border: none; color: white;
+  }
+  .cam-btn.primary:hover { opacity: 0.9; }
+
+  /* Scanning indicator */
+  .scanning {
+    padding: 20px; text-align: center;
+    color: var(--accent); font-family: 'DM Mono', monospace; font-size: 14px;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+  .pulse { animation: pulse 1.4s infinite; display: inline-block; }
+
+  /* Error */
+  .error {
+    background: #450a0a; border: 1px solid #7f1d1d;
+    border-radius: 12px; padding: 12px 16px;
+    color: #fca5a5; font-size: 14px; margin-bottom: 14px;
+  }
+
+  /* Action buttons */
+  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 24px; }
+  .action-btn {
+    flex: 1 1 auto; padding: 12px 16px; border-radius: 12px;
+    font-size: 14px; font-weight: 500; cursor: pointer;
+    font-family: inherit; display: flex; align-items: center;
+    justify-content: center; gap: 7px; transition: opacity 0.15s;
+  }
+  .action-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-manual { background: var(--surface2); border: 1px solid var(--border2); color: var(--text2); }
+  .btn-export { background: linear-gradient(135deg, #059669, #10b981); border: none; color: white; font-weight: 600; }
+  .btn-reset { background: var(--surface2); border: 1px solid #7f1d1d; color: #f87171; }
+
+  /* Table */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 20px; overflow: hidden; }
+  .table-head {
+    display: grid; grid-template-columns: 1fr 90px 80px 36px;
+    padding: 11px 16px; border-bottom: 1px solid var(--border);
+    color: var(--text4); font-size: 10px; font-family: 'DM Mono', monospace;
+    letter-spacing: 0.08em;
+  }
+  .table-head .th-amount { text-align: right; }
+  .ticket-row {
+    display: grid; grid-template-columns: 1fr 90px 80px 36px;
+    padding: 13px 16px; border-bottom: 1px solid #0f172a;
+    align-items: center; transition: background 0.15s;
+  }
+  .ticket-row:last-child { border-bottom: none; }
+  .ticket-row:hover { background: var(--surface2); }
+  .ticket-name { font-size: 14px; font-weight: 500; }
+  .ticket-desc { color: var(--text3); font-size: 11px; margin-top: 2px; }
+  .cat-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 3px 8px; border-radius: 999px; font-size: 11px; font-weight: 500;
+  }
+  .ticket-date { color: var(--text3); font-size: 12px; font-family: 'DM Mono', monospace; }
+  .ticket-amount { text-align: right; font-family: 'DM Mono', monospace; font-weight: 600; font-size: 14px; }
+  .del-btn {
+    background: #7f1d1d33; border: none; border-radius: 7px;
+    width: 28px; height: 28px; cursor: pointer; color: #f87171;
+    font-size: 13px; display: flex; align-items: center; justify-content: center;
+    opacity: 0; transition: opacity 0.15s;
+  }
+  .ticket-row:hover .del-btn { opacity: 1; }
+  .table-total {
+    display: grid; grid-template-columns: 1fr 90px 80px 36px;
+    padding: 15px 16px; border-top: 2px solid var(--border);
+    background: var(--surface2); align-items: center;
+  }
+  .total-label { color: var(--text2); font-weight: 500; font-size: 14px; grid-column: 1/4; }
+  .total-amount {
+    text-align: right; font-family: 'DM Mono', monospace; font-weight: 700; font-size: 17px;
+    background: linear-gradient(135deg, #6366f1, #a78bfa);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+
+  /* Empty state */
+  .empty {
+    text-align: center; padding: 56px 20px;
+    border: 1px solid var(--border); border-radius: 20px; background: var(--surface);
+    color: var(--text4);
+  }
+  .empty .big-icon { font-size: 52px; margin-bottom: 14px; }
+  .empty p { font-size: 15px; margin-bottom: 4px; color: var(--text3); }
+  .empty small { font-size: 12px; }
+
+  /* Modal */
+  .modal-bg {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75);
+    backdrop-filter: blur(5px); display: flex;
+    align-items: center; justify-content: center; z-index: 999;
+    padding: 16px;
+  }
+  .modal {
+    background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 22px; padding: 28px; width: min(460px, 100%);
+    box-shadow: 0 30px 70px rgba(0,0,0,0.6);
+  }
+  .modal h3 { font-family: 'DM Serif Display', serif; font-size: 22px; margin-bottom: 20px; }
+  .field { margin-bottom: 14px; }
+  .field label { display: block; color: var(--text2); font-size: 11px; font-family: 'DM Mono', monospace; letter-spacing: 0.07em; margin-bottom: 6px; }
+  .field input, .field select {
+    width: 100%; background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 10px 13px; color: var(--text);
+    font-size: 15px; outline: none; font-family: inherit;
+    transition: border-color 0.15s;
+  }
+  .field input:focus, .field select:focus { border-color: var(--accent); }
+  .modal-btns { display: flex; gap: 10px; margin-top: 22px; }
+  .modal-btns button { flex: 1; padding: 12px; border-radius: 10px; cursor: pointer; font-size: 15px; font-family: inherit; }
+  .btn-cancel { background: transparent; border: 1px solid var(--border2); color: var(--text2); }
+  .btn-save { background: linear-gradient(135deg, var(--accent), #8b5cf6); border: none; color: white; font-weight: 600; }
+
+  /* Reset modal */
+  .reset-modal { text-align: center; }
+  .reset-modal .warn-icon { font-size: 50px; margin-bottom: 14px; }
+  .reset-modal h3 { margin-bottom: 8px; }
+  .reset-modal p { color: var(--text3); font-size: 14px; margin-bottom: 22px; }
+  .btn-delete { background: linear-gradient(135deg, #dc2626, #b91c1c); border: none; color: white; font-weight: 600; }
+
+  @keyframes fadeIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+  .fade-in { animation: fadeIn 0.25s ease; }
+
+  /* API key banner */
+  .api-banner {
+    background: linear-gradient(135deg, #1e1b4b, #2e1065);
+    border: 1px solid #4338ca66; border-radius: 16px;
+    padding: 18px; margin-bottom: 20px; font-size: 14px;
+  }
+  .api-banner h4 { color: #a5b4fc; margin-bottom: 8px; font-size: 15px; }
+  .api-banner p { color: var(--text3); margin-bottom: 12px; font-size: 13px; line-height: 1.5; }
+  .api-input-row { display: flex; gap: 8px; }
+  .api-input-row input {
+    flex: 1; background: var(--surface2); border: 1px solid var(--border2);
+    border-radius: 10px; padding: 10px 13px; color: var(--text);
+    font-size: 14px; outline: none; font-family: 'DM Mono', monospace;
+  }
+  .api-input-row input:focus { border-color: var(--accent); }
+  .btn-api-save {
+    padding: 10px 16px; border-radius: 10px; border: none;
+    background: var(--accent); color: white; cursor: pointer;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    white-space: nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <div class="header">
+    <h1>GastoScan</h1>
+    <p>Escanea tickets · Controla tus gastos</p>
+  </div>
+  <div id="root"></div>
+</div>
+
+<script>
+// ─── CONFIG ─────────────────────────────────────────────────────────────────
+const CATEGORIES = {
+  supermercado: { label: "Supermercado", icon: "🛒", color: "#4ade80" },
+  gasolina:     { label: "Gasolina",     icon: "⛽", color: "#fb923c" },
+  restaurante:  { label: "Restaurante",  icon: "🍽️", color: "#f472b6" },
+  farmacia:     { label: "Farmacia",     icon: "💊", color: "#60a5fa" },
+  ropa:         { label: "Ropa",         icon: "👕", color: "#a78bfa" },
+  transporte:   { label: "Transporte",   icon: "🚌", color: "#34d399" },
+  ocio:         { label: "Ocio",         icon: "🎬", color: "#fbbf24" },
+  otros:        { label: "Otros",        icon: "📦", color: "#94a3b8" },
+};
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+let state = {
+  tickets: JSON.parse(localStorage.getItem('gastoscan_tickets') || '[]'),
+  apiKey: localStorage.getItem('gastoscan_apikey') || '',
+  scanning: false,
+  error: '',
+  modal: null,   // null | 'manual' | 'reset'
+  manualForm: { comercio:'', categoria:'supermercado', importe:'', fecha: today(), descripcion:'' },
+};
+
+function today() {
+  return new Date().toLocaleDateString('es-ES');
+}
+
+function saveTickets() {
+  localStorage.setItem('gastoscan_tickets', JSON.stringify(state.tickets));
+}
+
+function saveApiKey(k) {
+  state.apiKey = k;
+  localStorage.setItem('gastoscan_apikey', k);
+}
+
+// ─── API ─────────────────────────────────────────────────────────────────────
+async function analyzeReceipt(base64, mediaType) {
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': state.apiKey,
+      'anthropic-version': '2023-06-01',
+      'anthropic-dangerous-direct-browser-access': 'true',
+    },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: mediaType, data: base64 } },
+          { type: 'text', text: `Analiza este ticket/recibo y devuelve SOLO un JSON válido (sin markdown, sin texto extra) con esta estructura exacta:
+{"comercio":"nombre del establecimiento","categoria":"una de: supermercado, gasolina, restaurante, farmacia, ropa, transporte, ocio, otros","importe":12.50,"fecha":"DD/MM/YYYY o null","descripcion":"descripción breve"}
+Si no puedes leer el importe pon 0. Si no puedes determinar la categoría pon "otros".` }
+        ]
+      }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  const text = (data.content || []).map(b => b.text || '').join('');
+  const clean = text.replace(/```json|```/g, '').trim();
+  return JSON.parse(clean);
+}
+
+function toBase64(file) {
+  return new Promise((res, rej) => {
+    const r = new FileReader();
+    r.onload = () => res(r.result.split(',')[1]);
+    r.onerror = () => rej(new Error('Error leyendo archivo'));
+    r.readAsDataURL(file);
+  });
+}
+
+async function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) {
+    state.error = 'Por favor selecciona una imagen válida.';
+    render(); return;
+  }
+  if (!state.apiKey) {
+    state.error = 'Introduce tu API Key de Anthropic primero.';
+    render(); return;
+  }
+  state.scanning = true; state.error = ''; render();
+  try {
+    const b64 = await toBase64(file);
+    const result = await analyzeReceipt(b64, file.type);
+    state.tickets = [{ id: Date.now(), ...result }, ...state.tickets];
+    saveTickets();
+  } catch(e) {
+    state.error = 'Error al analizar: ' + (e.message || 'Inténtalo de nuevo.');
+  } finally {
+    state.scanning = false; render();
+  }
+}
+
+function exportCSV() {
+  const headers = ['Fecha','Comercio','Categoría','Importe (€)','Descripción'];
+  const rows = state.tickets.map(t => [
+    t.fecha || '-',
+    `"${t.comercio}"`,
+    CATEGORIES[t.categoria]?.label || t.categoria,
+    (t.importe||0).toFixed(2),
+    `"${t.descripcion||''}"`,
+  ]);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = `gastos_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click(); URL.revokeObjectURL(url);
+}
+
+// ─── RENDER ───────────────────────────────────────────────────────────────────
+function fmt(n) {
+  return (n||0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' });
+}
+
+function render() {
+  const root = document.getElementById('root');
+  const total = state.tickets.reduce((s, t) => s + (t.importe||0), 0);
+  const avg = state.tickets.length ? total / state.tickets.length : 0;
+
+  // Category breakdown
+  const bycat = {};
+  state.tickets.forEach(t => { bycat[t.categoria] = (bycat[t.categoria]||0) + (t.importe||0); });
+  const catEntries = Object.entries(bycat).sort((a,b) => b[1]-a[1]);
+
+  root.innerHTML = `
+
+    <!-- API KEY BANNER -->
+    ${!state.apiKey ? `
+    <div class="api-banner">
+      <h4>🔑 Configura tu API Key de Anthropic</h4>
+      <p>GastoScan usa la IA de Claude para leer tus tickets. Necesitas una API key gratuita de <a href="https://console.anthropic.com" target="_blank" style="color:#818cf8">console.anthropic.com</a>. Se guarda solo en tu dispositivo.</p>
+      <div class="api-input-row">
+        <input type="password" id="apiKeyInput" placeholder="sk-ant-..." value="${state.apiKey}">
+        <button class="btn-api-save" onclick="doSaveKey()">Guardar</button>
+      </div>
+    </div>
+    ` : `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:12px;font-size:13px;color:var(--text3);">
+      <span>🔑</span>
+      <span style="flex:1;font-family:monospace">API Key configurada ✓</span>
+      <button onclick="clearKey()" style="background:transparent;border:none;color:var(--text4);cursor:pointer;font-size:12px;">Cambiar</button>
+    </div>
+    `}
+
+    <!-- STATS -->
+    <div class="stats">
+      <div class="stat main">
+        <div class="stat-label">TOTAL</div>
+        <div class="stat-value">${fmt(total)}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">TICKETS</div>
+        <div class="stat-value">${state.tickets.length}</div>
+      </div>
+      <div class="stat">
+        <div class="stat-label">MEDIO</div>
+        <div class="stat-value">${state.tickets.length ? fmt(avg) : '—'}</div>
+      </div>
+    </div>
+
+    <!-- CATEGORY PILLS -->
+    ${catEntries.length ? `<div class="cat-pills">` + catEntries.map(([k,v]) => {
+      const c = CATEGORIES[k]||CATEGORIES.otros;
+      return `<div class="cat-pill" style="background:${c.color}18;border:1px solid ${c.color}44;color:${c.color}">
+        ${c.icon} <span>${c.label}</span> <span style="color:var(--text3);font-weight:400">${fmt(v)}</span>
+      </div>`;
+    }).join('') + `</div>` : ''}
+
+    <!-- SCANNING STATE OR SCAN ZONE -->
+    ${state.scanning ? `
+      <div class="scan-zone">
+        <div class="scanning">
+          <span class="pulse">🔍</span> Analizando ticket con IA...
+        </div>
+      </div>
+    ` : `
+      <!-- CAMERA BUTTONS -->
+      <div class="camera-btns">
+        <button class="cam-btn primary" onclick="openCamera()">
+          📷 Usar cámara
+        </button>
+        <button class="cam-btn" onclick="openGallery()">
+          🖼️ Desde galería
+        </button>
+      </div>
+      <div class="scan-zone" id="dropzone">
+        <span class="icon">⬆️</span>
+        <h2>O arrastra una foto aquí</h2>
+        <p>JPG · PNG · WEBP · HEIC</p>
+      </div>
+    `}
+
+    <!-- HIDDEN FILE INPUTS -->
+    <input type="file" id="cameraInput" accept="image/*" capture="environment" style="display:none" onchange="handleInputChange(this)">
+    <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handleInputChange(this)">
+
+    <!-- ERROR -->
+    ${state.error ? `<div class="error">⚠️ ${state.error}</div>` : ''}
+
+    <!-- ACTION BUTTONS -->
+    <div class="actions">
+      <button class="action-btn btn-manual" onclick="openManual()">✏️ Manual</button>
+      <button class="action-btn btn-export" ${!state.tickets.length?'disabled':''} onclick="exportCSV()">📥 Exportar CSV</button>
+      <button class="action-btn btn-reset" ${!state.tickets.length?'disabled':''} onclick="openReset()">🗑️ Resetear</button>
+    </div>
+
+    <!-- TICKETS TABLE -->
+    ${state.tickets.length ? `
+    <div class="table-wrap">
+      <div class="table-head">
+        <span>COMERCIO</span>
+        <span>CATEGORÍA</span>
+        <span class="th-amount">IMPORTE</span>
+        <span></span>
+      </div>
+      ${state.tickets.map((t, i) => {
+        const cat = CATEGORIES[t.categoria]||CATEGORIES.otros;
+        return `<div class="ticket-row fade-in">
+          <div>
+            <div class="ticket-name">${t.comercio}</div>
+            ${t.descripcion ? `<div class="ticket-desc">${t.descripcion}</div>` : ''}
+            ${t.fecha ? `<div class="ticket-desc">${t.fecha}</div>` : ''}
+          </div>
+          <div>
+            <span class="cat-badge" style="background:${cat.color}18;color:${cat.color}">${cat.icon} ${cat.label}</span>
+          </div>
+          <div class="ticket-amount">${fmt(t.importe)}</div>
+          <div style="display:flex;justify-content:flex-end">
+            <button class="del-btn" onclick="deleteTicket(${t.id})" title="Eliminar">✕</button>
+          </div>
+        </div>`;
+      }).join('')}
+      <div class="table-total">
+        <span class="total-label">Total (${state.tickets.length} ticket${state.tickets.length!==1?'s':''})</span>
+        <span class="total-amount">${fmt(total)}</span>
+      </div>
+    </div>
+    ` : `
+    <div class="empty">
+      <div class="big-icon">🧾</div>
+      <p>No hay tickets todavía</p>
+      <small>Fotografía o añade tu primer ticket</small>
+    </div>
+    `}
+
+    <!-- MANUAL MODAL -->
+    ${state.modal === 'manual' ? `
+    <div class="modal-bg" onclick="closeModal(event)">
+      <div class="modal">
+        <h3>✏️ Ticket Manual</h3>
+        <div class="field">
+          <label>COMERCIO</label>
+          <input type="text" id="f_comercio" value="${state.manualForm.comercio}" placeholder="Nombre del establecimiento" oninput="updateForm('comercio',this.value)">
+        </div>
+        <div class="field">
+          <label>IMPORTE (€)</label>
+          <input type="number" step="0.01" id="f_importe" value="${state.manualForm.importe}" placeholder="0.00" oninput="updateForm('importe',this.value)">
+        </div>
+        <div class="field">
+          <label>CATEGORÍA</label>
+          <select id="f_categoria" onchange="updateForm('categoria',this.value)">
+            ${Object.entries(CATEGORIES).map(([k,v]) => `<option value="${k}" ${state.manualForm.categoria===k?'selected':''}>${v.icon} ${v.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="field">
+          <label>FECHA</label>
+          <input type="text" id="f_fecha" value="${state.manualForm.fecha}" placeholder="DD/MM/YYYY" oninput="updateForm('fecha',this.value)">
+        </div>
+        <div class="field">
+          <label>DESCRIPCIÓN</label>
+          <input type="text" id="f_desc" value="${state.manualForm.descripcion}" placeholder="Breve descripción..." oninput="updateForm('descripcion',this.value)">
+        </div>
+        <div class="modal-btns">
+          <button class="btn-cancel" onclick="state.modal=null;render()">Cancelar</button>
+          <button class="btn-save" onclick="saveManual()">Guardar Ticket</button>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+
+    <!-- RESET MODAL -->
+    ${state.modal === 'reset' ? `
+    <div class="modal-bg" onclick="closeModal(event)">
+      <div class="modal reset-modal">
+        <div class="warn-icon">⚠️</div>
+        <h3>¿Borrar todo?</h3>
+        <p>Se eliminarán los ${state.tickets.length} tickets almacenados. Esta acción no se puede deshacer.</p>
+        <div class="modal-btns">
+          <button class="btn-cancel" onclick="state.modal=null;render()">Cancelar</button>
+          <button class="btn-delete" onclick="doReset()">Borrar todo</button>
+        </div>
+      </div>
+    </div>
+    ` : ''}
+  `;
+
+  // Drag and drop
+  const dz = document.getElementById('dropzone');
+  if (dz) {
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag'));
+    dz.addEventListener('drop', e => {
+      e.preventDefault(); dz.classList.remove('drag');
+      handleFile(e.dataTransfer.files[0]);
+    });
+  }
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+function openCamera() { document.getElementById('cameraInput')?.click(); }
+function openGallery() { document.getElementById('galleryInput')?.click(); }
+function handleInputChange(input) { if (input.files[0]) handleFile(input.files[0]); }
+function deleteTicket(id) { state.tickets = state.tickets.filter(t => t.id !== id); saveTickets(); render(); }
+function openManual() { state.modal = 'manual'; state.manualForm = { comercio:'', categoria:'supermercado', importe:'', fecha: today(), descripcion:'' }; render(); }
+function openReset() { state.modal = 'reset'; render(); }
+function closeModal(e) { if (e.target.classList.contains('modal-bg')) { state.modal = null; render(); } }
+function updateForm(k, v) { state.manualForm[k] = v; }
+function doSaveKey() { const v = document.getElementById('apiKeyInput')?.value?.trim(); if(v) { saveApiKey(v); state.error=''; render(); } }
+function clearKey() { saveApiKey(''); render(); }
+
+function saveManual() {
+  const f = state.manualForm;
+  if (!f.comercio.trim() || !f.importe) {
+    alert('Introduce al menos comercio e importe.'); return;
+  }
+  state.tickets = [{ id: Date.now(), comercio: f.comercio, categoria: f.categoria, importe: parseFloat(f.importe)||0, fecha: f.fecha, descripcion: f.descripcion }, ...state.tickets];
+  saveTickets(); state.modal = null; render();
+}
+
+function doReset() { state.tickets = []; saveTickets(); state.modal = null; render(); }
+
+// ─── INIT ─────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
