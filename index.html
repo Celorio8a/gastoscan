@@ -357,13 +357,11 @@ async function handleFile(file) {
 }
 
 function exportCSV() {
-  const headers = ['Fecha','Comercio','Categoría','Importe (€)','Descripción'];
+  const headers = ['Fecha','Tipo de gasto','Importe (€)'];
   const rows = state.tickets.map(t => [
     t.fecha || '-',
-    `"${t.comercio}"`,
     CATEGORIES[t.categoria]?.label || t.categoria,
     (t.importe||0).toFixed(2),
-    `"${t.descripcion||''}"`,
   ]);
   const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
   const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
